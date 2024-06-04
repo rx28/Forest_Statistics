@@ -1,6 +1,6 @@
 ---
 title: "eda_final_project"
-author: "Divya Manoj"
+author: "Rahul"
 date: "2023-04-17"
 output: pdf_document
 ---
