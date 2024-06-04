@@ -1,0 +1,326 @@
+---
+title: "eda_final_code"
+author: "Rahul"
+date: "2023-05-04"
+output: pdf_document
+---
+
+```{r}
+# Loading libraries
+library(ggplot2)
+library(tidyr)
+library(dbplyr)
+library(skimr)
+library(broom)
+library(leaps)
+```
+
+# Loading data and summarizing
+```{r}
+data <- read.csv("C:/Users/manoj/Downloads/forestfires.csv")
+summary(data)
+```
+```{r}
+#converting categorical value into numerical values for regression analysis
+month_num <- c("jan"=1, "feb"=2, "mar"=3, "apr"=4, "may"=5, "jun"=6,
+               "jul"=7, "aug"=8, "sep"=9, "oct"=10, "nov"=11, "dec"=12)
+data$month <- month_num[data$month]
+
+# Convert day to numerical values
+day_num <- c("sun"=1, "mon"=2, "tue"=3, "wed"=4, "thu"=5, "fri"=6, "sat"=7)
+data$day <- day_num[data$day]
+
+head(data)
+```
+
+
+
+
+```{r}
+# Check for missing values
+sum(is.na(data))
+
+
+```
+# Outlier Visualization for temp predictor
+```{r}
+
+# create a new variable for z-scores of the area column
+data$temp_zscore <- abs(scale(data$temp, center = TRUE, scale = TRUE))
+
+# identify rows with z-scores greater than 3
+outliers <- subset(data, temp_zscore > 3)
+
+# create a scatter plot of the area variable with outliers highlighted in red
+plot(data$temp, col = ifelse(data$temp_zscore > 3, "red", "black"))
+
+
+```
+
+# Outlier Visualization for RH predictor
+```{r}
+
+# create a new variable for z-scores of the area column
+data$RH_zscore <- abs(scale(data$RH, center = TRUE, scale = TRUE))
+
+# identify rows with z-scores greater than 3
+outliers <- subset(data, RH_zscore > 3)
+
+# create a scatter plot of the area variable with outliers highlighted in red
+plot(data$RH, col = ifelse(data$RH_zscore > 3, "red", "black"))
+
+
+```
+
+
+# Outlier Visualization for wind predictor
+
+```{r}
+# load forest fire dataset
+
+# create a new variable for z-scores of the area column
+data$wind_zscore <- abs(scale(data$wind, center = TRUE, scale = TRUE))
+
+# identify rows with z-scores greater than 3
+outliers <- subset(data, wind_zscore > 3)
+
+# create a scatter plot of the area variable with outliers highlighted in red
+plot(data$wind, col = ifelse(data$wind_zscore > 3, "red", "black"))
+
+
+```
+
+# Outlier Visualization for area
+
+```{r}
+# load forest fire dataset
+
+# create a new variable for z-scores of the area column
+data$area_zscore <- abs(scale(data$area, center = TRUE, scale = TRUE))
+
+# identify rows with z-scores greater than 3
+outliers <- subset(data, area_zscore > 3)
+
+# create a scatter plot of the area variable with outliers highlighted in red
+plot(data$area, col = ifelse(data$area_zscore > 3, "red", "black"))
+
+
+```
+
+
+
+
+```{r}
+# Calculate Z-score for each numeric variable on whole dataset
+z_scores <- (data[,13] - mean(data[,13])) / sd(data[,13])
+
+# Identify outliers using a Z-score threshold of 3
+outliers <- abs(scale(data[,13])) > 3
+print(outliers)
+```
+
+```{r}
+# Create new data frame without outliers
+data_no_outliers <- data[!outliers, ]
+head(data_no_outliers)
+
+```
+# We removed 4 rows that had outliers.
+
+
+
+```{r}
+
+#Checking after OutLier Removal
+
+# create a new variable for z-scores of the area column
+data_no_outliers$area_zscore <- abs(scale(data_no_outliers$area, center = TRUE, scale = TRUE))
+
+# identify rows with z-scores greater than 3
+outliers <- subset(data_no_outliers, area_zscore > 3)
+
+# create a scatter plot of the area variable with outliers highlighted in red
+plot(data_no_outliers$area, col = ifelse(data_no_outliers$area_zscore > 3, "red", "black"))
+
+
+```
+# The y-axis range has descreased indicating that outliers are removed from area.
+
+
+# Scatter plot of predictor variables with target area
+```{r}
+ggplot(data_no_outliers, aes(x = temp, y = area, color = factor(month))) + 
+  geom_point() + 
+  ggtitle("Scatter plot of temperature and area")
+
+ggplot(data_no_outliers, aes(x = DMC, y = area, color = factor(month))) + 
+  geom_point() + 
+  ggtitle("Scatter plot of DMC and area")
+
+ggplot(data_no_outliers, aes(x = DC, y = area, color = factor(month))) + 
+  geom_point() + 
+  ggtitle("Scatter plot of DC and area")
+
+ggplot(data_no_outliers, aes(x = wind, y = area, color = factor(month))) + 
+  geom_point() + 
+  ggtitle("Scatter plot of wind and area")
+```
+# we have visualized the relationship between the predictor variables (temperature, DMC, DC, and wind) and the forest fire area using scatter plots. 
+
+
+# Scatter plot of predictor variables with target log(area+1)
+```{r}
+ggplot(data_no_outliers, aes(x = temp, y = log(area+1), color = factor(month))) + 
+  geom_point() + ggtitle("Scatter plot of temperature and area")
+
+ggplot(data_no_outliers, aes(x = DMC, y = log(area+1), color = factor(month))) + 
+  geom_point() + ggtitle("Scatter plot of DMC and area")
+
+ggplot(data_no_outliers, aes(x = DC, y = log(area+1), color = factor(month))) + 
+  geom_point() + ggtitle("Scatter plot of DC and area")
+
+ggplot(data_no_outliers, aes(x = wind, y = log(area+1), color = factor(month))) + 
+  geom_point() + ggtitle("Scatter plot of wind and area")
+```
+# By taking the logarithm of the area variable, we are transforming the data to a more suitable scale for modeling purposes. This is because the area variable has a wide range of values, with a few high values (outliers) that make it difficult to visualize the relationship with the predictor variables. The logarithmic transformation reduces the effect of these outliers and makes it easier to see the overall pattern of the relationship.
+
+# It is also interesting to note that there are higher numbers of fires in August and September, with a decrease in the number of fires in the winter months.
+
+
+
+
+
+```{r}
+# Plot the frequency of fires in each zone
+
+# Aggregate the number of fires by x and y coordinates
+fire_counts <- aggregate(area ~ X + Y, data = data, FUN = length)
+
+# Create a ggplot object with the fire counts
+ggplot(fire_counts, aes(x = X, y = Y, fill = area)) +
+  
+  # Use geom_raster to create a heatmap
+  geom_raster() +
+  
+  # Use scale_fill_gradient to set the color scale
+  scale_fill_gradient(low = "white", high = "red") +
+  
+  # Add x and y labels
+  xlab("X Coordinate") +
+  ylab("Y Coordinate") +
+  
+  # Add a title
+  ggtitle("Frequency of Fires by Zone")
+st(data$area, main = "Frequency of Fires in Each Zone", xlab = "Area")
+```
+```{r}
+# Copy of dataframe with no outliers
+data2 = data_no_outliers
+```
+
+```{r}
+data2
+```
+
+```{r}
+# Removing columns temp_zscore, RH_zscore, wind_zscore, area_zscore
+data2 <- subset(data2, select = -c(temp_zscore, RH_zscore, wind_zscore, area_zscore))
+```
+
+```{r}
+data2
+```
+# Summary of Linear Models
+```{r}
+summary(lm(area ~ ., data = data2))
+```
+
+```{r}
+summary(lm(log(area+1) ~ ., data = data2))
+```
+
+# lm model with log(area+1) as target is a better model as it has higher adjusted R-squared value and lower residual standard error compared to lm model with area as target. So, we go with lm model with target variable as log(area+1).
+
+
+
+# As a first step, we can fit a linear model with all the predictors and look at the results. We see that a lot of the coefficients are within the margin of error of zero, which suggests to us that a model with fewer predictors would do better.
+
+```{r}
+data2_loglm = lm(log(area+1) ~ ., data = data2)
+data2log_coefs = tidy(data2_loglm, conf.int = TRUE)
+ggplot(data2log_coefs[-1, ], aes(x = estimate, y = term, xmin = conf.low, xmax = conf.high)) +
+    geom_point() + geom_errorbarh() + geom_vline(xintercept = 0)
+```
+
+# Chose predictors with Best subset method. This method finds the combination of predictors that is best for the model.
+
+
+```{r}
+data2log_best_subset = regsubsets(log(area+1) ~ ., data = data2)
+summary(data2log_best_subset)$which
+```
+
+# So we consider top 5 features - month, wind, x, DC, DMC
+
+
+
+```{r}
+mod1 <- lm(log(area+1) ~ X  + DMC + month + DC + wind, data=data2)
+```
+```{r}
+prediction_grid1 = data.frame(expand.grid(X = 1, DMC = seq(1, 300, by=50), month = 1, DC = 7.9, wind = c(0.4, 2.7, 4, 4.018, 4.9, 9.4)))
+mod4_1_preds = augment(mod1, newdata = prediction_grid1)
+ggplot(mod4_1_preds) +
+    geom_line(aes(x = wind, y = .fitted)) +
+    facet_wrap(~ DMC, ncol = 7)+
+    ggtitle("Given DMC")
+```
+# For given DMC value, fitted value of target increases as value of wind increases. For given value of wind, the fitted value of target increases with increase in DMC.
+
+```{r}
+prediction_grid3 = data.frame(expand.grid(X = 1, DMC = 1, month = 1, DC = c(7.9, 437.7, 664.2, 547.9, 713.9, 860.6), wind = c(0.4, 2.7, 4, 4.018, 4.9, 9.4)))
+mod4_1_preds = augment(mod1, newdata = prediction_grid3)
+ggplot(mod4_1_preds) +
+    geom_line(aes(x = DC, y = .fitted)) +
+    facet_wrap(~ wind, ncol = 7)+
+    ggtitle("Given wind")
+```
+# For given wind value, fitted value of target decreases with increase in DC. For a given DC value, fitted value of target increases with increase of wind value.
+
+
+```{r}
+prediction_grid4 = data.frame(expand.grid(X = c(1,3,4,4.669,7,9), DMC = 1, month = 1, DC = 7.9, wind = c(0.4, 2.7, 4, 4.018, 4.9, 9.4)))
+mod4_1_preds = augment(mod1, newdata = prediction_grid4)
+ggplot(mod4_1_preds) +
+    geom_line(aes(x = wind, y = .fitted)) +
+    facet_wrap(~ X, ncol = 7)+
+    ggtitle("Given X")
+```
+# For given X, fitted value of target increases with increase in wind values. For given wind value, fitted value of target increases with increase in X values.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
